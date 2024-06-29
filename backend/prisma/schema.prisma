@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model user {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  password      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  ownGroup      group?
+  groupId       String?
+  memberOfGroup group?   @relation("groupMembers", fields: [groupId], references: [id])
+  roles         roles[]
+  tasks         tasks[]
+}
+
+model roles {
+  userId       String
+  groupId      String
+  createAccess Boolean @default(false)
+  readAccess   Boolean @default(false)
+  updateAccess Boolean @default(false)
+  deleteAccess Boolean @default(false)
+  user         user    @relation(fields: [userId], references: [id])
+  group        group   @relation(fields: [groupId], references: [id])
+
+  @@unique([userId, groupId], name: "unique_user_group")
+}
+
+model group {
+  id        String   @id @default(cuid())
+  name      String
+  tag       String   @unique
+  leaderId  String   @unique
+  leader    user     @relation(fields: [leaderId], references: [id])
+  members   user[]   @relation("groupMembers")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks     tasks[]
+  roles     roles[]
+}
+
+enum TaskStatus {
+  PENDING
+  INPROGRESS
+  COMPLETED
+}
+
+model tasks {
+  id         String     @id @default(cuid())
+  title      String
+  content    String
+  status     TaskStatus @default(PENDING)
+  completeBy DateTime
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  groupId    String
+  assignedTo String?
+  user       user?      @relation(fields: [assignedTo], references: [id])
+  group      group      @relation(fields: [groupId], references: [id])
+}
